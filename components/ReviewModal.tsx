@@ -17,7 +17,7 @@ type ModalProps = React.FC<{
 const dropIn = {
   hidden: {
     y: "10vh",
-    opacity: 0,
+    opacity: 1,
   },
   visible: {
     y: "0",
@@ -25,7 +25,7 @@ const dropIn = {
     transition: {
       duration: 0.1,
       type: "spring",
-      damping: 100,
+      damping: 10,
       stiffness: 500,
     },
   },
@@ -48,7 +48,7 @@ export const ReviewModal: ModalProps = ({
         <motion.div
           onClick={(e) => e.stopPropagation()}
           variants={dropIn}
-          className="bg-[#303030] fixed lg:top-1/3 lg:left-1/3 rounded-md p-10 z-[3] max-w-[25rem] w-full"
+          className="bg-[#303030] fixed left-[30%] top-[30%] transform translate-x-[-50%] translate-y-[-50%] rounded-md p-10 z-[3] max-w-[30rem] w-full"
           initial="hidden"
           animate="visible"
           exit="exit"
@@ -56,7 +56,7 @@ export const ReviewModal: ModalProps = ({
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-medium">Add a new review</h3>
             <IoMdClose
-              className="cursor-pointer text-xl"
+              className="text-xl cursor-pointer bg-[#484848] p-[1px] rounded-sm"
               onClick={handleToggleModal}
             >
               Close Modal

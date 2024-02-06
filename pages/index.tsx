@@ -4,22 +4,36 @@ import axios from "@/components/axios"
 import { useDebounce } from "react-use"
 import { MdKeyboardArrowRight } from "react-icons/md"
 import SearchItem from "@/components/SearchItem"
+import QueryString from "qs"
+import moment from "moment"
+import DropdownNumbers from "@/components/DropdownNumbers"
+import MovieItem from "@/components/MovieItem"
+import GenresModal from "@/components/GenresModal"
 
 // create type for genres state
-type Genre = {
-  name: string
-  id: number
-}
 
 const BASE_IMAGE_URL = "https://image.tmdb.org/t/p/"
 
 export default function Home() {
+  const [movies, setMovies] = useState<MoviesState>({
+    page: 1,
+    results: [],
+    total_pages: 0,
+    total_results: 0,
+  })
+
   const [searchMovies, setSearchMovies] = useState<MovieSearch[]>([])
   const [searchQuery, setSearchQuery] = useState<string>("")
-  const [genreModal, setGenreModal] = useState<boolean>(false)
-  const [searchModal, setSearchModal] = useState<boolean>(false)
 
+  const [genreModal, setGenreModal] = useState<boolean>(false)
   const [genres, setGenres] = useState<Genre[]>([])
+
+  const [selectedGenres, setSelectedGenres] = useState<Genre[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>("")
+  const [selectedRating, setSelectedRating] = useState<string>("")
+  const [selectedSort, setSelectedSort] = useState<string>("")
+
+  const [searchModal, setSearchModal] = useState<boolean>(false)
 
   useEffect(() => {
     axios
@@ -30,7 +44,30 @@ export default function Home() {
       .catch((err) => {})
   }, [])
 
-  const [selectedGenres, setSelectedGenres] = useState<Genre[]>([])
+  const getMovies = (page?: number) => {
+    const genresData =
+      genres?.length > 0
+        ? selectedGenres?.map((genre) => `${genre.id}`).toString()
+        : ""
+    const query = QueryString.stringify({
+      page: !page ? page : movies?.page,
+      genre: genresData,
+      year: selectedYear ? selectedYear : "",
+      rating: selectedRating ? selectedRating : "",
+      sortBy: selectedSort ? selectedSort : "",
+    })
+
+    axios
+      .get(`/movies?${query}`)
+      .then(({ data }) => {
+        setMovies(data)
+      })
+      .catch((err) => {})
+  }
+
+  useEffect(() => {
+    getMovies()
+  }, [selectedGenres, selectedYear, selectedRating, selectedSort])
 
   const handleGenreChange = (id: number) => {
     const genre = genres.find((genre) => genre.id === id)
@@ -90,10 +127,35 @@ export default function Home() {
     setGenreModal(!genreModal)
   }
 
+  const filterMoviesByYear = (val: any) => {
+    setSelectedYear(val)
+  }
+
+  const filterMoviesRating = (val: any) => {
+    setSelectedRating(val)
+  }
+
+  const sortMoviesBy = (val: any) => {
+    setSelectedSort(val)
+  }
+
+  const handleClickPrev = () => {
+    if (movies?.page === 1) return
+
+    getMovies(movies?.page - 1)
+  }
+
+  const handleClickNext = () => {
+    if (movies?.page === movies?.total_pages) return
+
+    getMovies(movies?.page + 1)
+  }
+
   return (
-    <div className="wrapper py-10 ">
-      <div className="flex items-center justify-between">
-        <div className="max-w-[25rem] w-full relative">
+    <div className="p-0 py-10 wrapper">
+      <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
+        {/* Search Start */}
+        <div className="max-w-[20rem] w-full relative">
           {/* Search Backdrop */}
           {searchModal && searchMovies?.length > 0 && (
             <div
@@ -127,8 +189,40 @@ export default function Home() {
             </div>
           )}
         </div>
+        {/* Search End */}
 
-        <div>
+        <div className="flex flex-wrap items-center gap-5">
+          {/* Sort By Start */}
+          <select
+            onChange={(e) => sortMoviesBy(e.target.value)}
+            className="bg-[#272727] py-1.5 px-3"
+          >
+            <option value="">Sort By</option>
+            <option value="title">Title</option>
+            <option value="primary_release_date">Release Date</option>
+            <option value="vote_average">Rating</option>
+          </select>
+          {/* Sort By End */}
+
+          {/* Rating Start */}
+          <DropdownNumbers
+            id="rating"
+            min={1}
+            max={10}
+            onSelect={filterMoviesRating}
+          />
+          {/* Rating End */}
+
+          {/* Years Start */}
+          <DropdownNumbers
+            id="year"
+            min={1900}
+            max={new Date().getFullYear()}
+            onSelect={filterMoviesByYear}
+          />
+          {/* Years End */}
+
+          {/* Genres Start */}
           <div className="relative overflow-visible">
             <div
               onClick={toggleGenreModal}
@@ -138,39 +232,50 @@ export default function Home() {
               <MdKeyboardArrowRight className="text-xl" />
             </div>
 
-            <div
-              className={`${
-                genreModal ? "genreModalOpen" : "genreModalClosed"
-              } bg-[#272727] p-4 absolute top-10 left-0 grid grid-cols-2 gap-2 min-w-[20rem]`}
-            >
-              {genres.map((genre) => {
-                return (
-                  <div
-                    key={genre.id}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      className="w-3 h-3"
-                      id={`${genre.id}`}
-                      checked={isCheckboxChecked(genre.id)}
-                      onChange={() => {
-                        handleGenreChange(genre.id)
-                      }}
-                      type="checkbox"
-                    />
-                    <label
-                      className="cursor-pointer select-none"
-                      htmlFor={`${genre.id}`}
-                    >
-                      {genre.name}
-                    </label>
-                  </div>
-                )
-              })}
-            </div>
+            <GenresModal
+              show={genreModal}
+              genres={genres}
+              handleGenreChange={handleGenreChange}
+              isCheckboxChecked={isCheckboxChecked}
+            />
           </div>
+          {/* Genres End */}
         </div>
       </div>
+
+      {/* Render Movies Start */}
+      <div className="grid w-full grid-cols-1 gap-6 mt-10 xsm:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {movies?.results?.map((movie) => {
+          if (!movie.poster_path || !movie.title || !movie.release_date) return
+
+          return <MovieItem key={movie?.id} movie={movie} />
+        })}
+      </div>
+      {/* Render Movies End */}
+
+      {/* Buttons */}
+      {movies?.results?.length > 1 && (
+        <div className="flex items-center justify-center gap-5 my-10">
+          <button
+            onClick={handleClickPrev}
+            className={`px-5 py-2 text-[1rem] uppercase font-medium rounded-sm ${
+              movies?.page === 1 ? "bg-[#B3B3B3] text-[black]" : "bg-primary"
+            } `}
+          >
+            Prev
+          </button>
+          <button
+            onClick={handleClickNext}
+            className={`px-5 py-2 text-[1rem] uppercase font-medium rounded-sm bg-primary ${
+              movies?.page === movies?.total_pages
+                ? "bg-[#B3B3B3] text-[black]"
+                : "bg-primary"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

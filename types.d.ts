@@ -15,9 +15,16 @@ interface MovieSearch {
   vote_count: number
 }
 
-interface Genre {
-  id: number
+type Genre = {
   name: string
+  id: number
+}
+
+type MoviesState = {
+  page: number
+  results: MovieSearch[]
+  total_pages: number
+  total_results: number
 }
 
 interface Review {
