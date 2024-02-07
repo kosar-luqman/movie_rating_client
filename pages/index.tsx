@@ -50,7 +50,7 @@ export default function Home() {
         ? selectedGenres?.map((genre) => `${genre.id}`).toString()
         : ""
     const query = QueryString.stringify({
-      page: !page ? page : movies?.page,
+      page: page ? page : movies?.page,
       genre: genresData,
       year: selectedYear ? selectedYear : "",
       rating: selectedRating ? selectedRating : "",
